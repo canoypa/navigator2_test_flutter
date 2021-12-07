@@ -5,14 +5,12 @@ import 'package:navigator2_test_flutter/test_page.dart';
 class HomeRouteInformationParser extends RouteInformationParser<Uri> {
   @override
   Future<Uri> parseRouteInformation(RouteInformation routeInformation) async {
-    print("parseRouteInformation: ${routeInformation.location}");
     final uri = Uri.parse(routeInformation.location ?? "/");
     return uri;
   }
 
   @override
   RouteInformation restoreRouteInformation(Uri configuration) {
-    print("restoreRouteInformation: ${configuration.path}");
     return RouteInformation(location: configuration.path);
   }
 }
@@ -44,12 +42,13 @@ class HomeRouterDelegate extends RouterDelegate<Uri>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(builder: (context, ref, _) {
-      ref.listen(appPathProvider, (previous, next) {
+    return ProviderListener(
+      provider: appPathProvider,
+      onChange: (context, Uri configuration) {
+        _routeConfiguration = configuration;
         notifyListeners();
-      });
-
-      return Navigator(
+      },
+      child: Navigator(
         key: navigatorKey,
         pages: [
           HomePage(
@@ -64,7 +63,7 @@ class HomeRouterDelegate extends RouterDelegate<Uri>
                     OutlinedButton(
                       child: const Text("Go to /test"),
                       onPressed: () {
-                        ref
+                        context
                             .read(appPathProvider.notifier)
                             .route(Uri.parse("/test"));
                       },
@@ -79,19 +78,19 @@ class HomeRouterDelegate extends RouterDelegate<Uri>
             HomePage(
               key: const ValueKey("/test"),
               child: TestScreen(back: () {
-                ref.read(appPathProvider.notifier).route(Uri.parse("/"));
+                context.read(appPathProvider.notifier).route(Uri.parse("/"));
               }),
             ),
         ],
         onPopPage: (route, result) {
           if (!route.didPop(result)) return false;
 
-          ref.read(appPathProvider.notifier).route(Uri.parse("/"));
+          context.read(appPathProvider.notifier).route(Uri.parse("/"));
 
           return true;
         },
-      );
-    });
+      ),
+    );
   }
 
   @override
@@ -108,8 +107,8 @@ class TestScreen extends ConsumerWidget {
   TestScreen({Key? key, required this.back}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final _route = ref.read(appPathProvider.notifier).current;
+  Widget build(BuildContext context, watch) {
+    final _route = watch(appPathProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Test Page")),
@@ -131,7 +130,7 @@ class TestScreen extends ConsumerWidget {
                     OutlinedButton(
                       child: const Text("Go to /test/test"),
                       onPressed: () {
-                        ref
+                        context
                             .read(appPathProvider.notifier)
                             .route(Uri.parse("/test/test"));
                       },
@@ -157,7 +156,7 @@ class TestScreen extends ConsumerWidget {
                       OutlinedButton(
                         child: const Text("Go to /test"),
                         onPressed: () {
-                          ref
+                          context
                               .read(appPathProvider.notifier)
                               .route(Uri.parse("/test"));
                         },
@@ -171,7 +170,7 @@ class TestScreen extends ConsumerWidget {
         onPopPage: (route, result) {
           if (!route.didPop(result)) return false;
 
-          ref.read(appPathProvider.notifier).route(Uri.parse("/test"));
+          context.read(appPathProvider.notifier).route(Uri.parse("/test"));
 
           return true;
         },
