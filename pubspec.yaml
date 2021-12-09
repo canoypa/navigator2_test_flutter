@@ -35,9 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   animations: ^2.0.2
-  # ToDo: Dart の問題で Web で動作しない
-  # 修正済みのようなので公開され次第 v1 に移行する
-  hooks_riverpod: ^0.14.0+3
+  flutter_riverpod: ^1.0.2
 
 dev_dependencies:
   flutter_test:
