@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:navigator2_test_flutter/main.dart';
 import 'package:navigator2_test_flutter/test_page.dart';
 
 class HomeRouteInformationParser extends RouteInformationParser<Uri> {
@@ -15,79 +16,80 @@ class HomeRouteInformationParser extends RouteInformationParser<Uri> {
   }
 }
 
-class AppPathState extends StateNotifier<Uri> {
-  AppPathState() : super(Uri.parse("/"));
-
-  void route(Uri uri) {
-    state = uri;
-  }
-
-  Uri get current {
-    return state;
-  }
-}
-
-final appPathProvider =
-    StateNotifierProvider<AppPathState, Uri>((_) => AppPathState());
-
 class HomeRouterDelegate extends RouterDelegate<Uri>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<Uri> {
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  Uri _routeConfiguration = Uri.parse("/");
+  final Uri Function() getCurrent;
+  final void Function(Uri) onNewRoute;
+
+  HomeRouterDelegate({
+    required this.getCurrent,
+    required this.onNewRoute,
+  });
 
   @override
-  Uri get currentConfiguration => _routeConfiguration;
+  Uri get currentConfiguration {
+    return getCurrent();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ProviderListener(
       provider: appPathProvider,
       onChange: (context, Uri configuration) {
-        _routeConfiguration = configuration;
+        print("change: $configuration");
         notifyListeners();
       },
-      child: Navigator(
-        key: navigatorKey,
-        pages: [
-          HomePage(
-            key: const ValueKey("/"),
-            child: Scaffold(
-              appBar: AppBar(title: const Text("Home Page")),
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text("Current Path: ${_routeConfiguration.path}"),
-                    OutlinedButton(
-                      child: const Text("Go to /test"),
-                      onPressed: () {
-                        context
-                            .read(appPathProvider.notifier)
-                            .route(Uri.parse("/test"));
-                      },
+      child: Consumer(
+        builder: (context, watch, child) {
+          final _route = watch(appPathProvider);
+
+          return Navigator(
+            key: navigatorKey,
+            pages: [
+              HomePage(
+                key: const ValueKey("/"),
+                child: Scaffold(
+                  appBar: AppBar(title: const Text("Home Page")),
+                  body: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Current Path: ${_route.path}"),
+                        OutlinedButton(
+                          child: const Text("Go to /test"),
+                          onPressed: () {
+                            context
+                                .read(appPathProvider.notifier)
+                                .route(Uri.parse("/test"));
+                          },
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          if (_routeConfiguration.pathSegments.isNotEmpty &&
-              _routeConfiguration.pathSegments[0] == "test")
-            HomePage(
-              key: const ValueKey("/test"),
-              child: TestScreen(back: () {
-                context.read(appPathProvider.notifier).route(Uri.parse("/"));
-              }),
-            ),
-        ],
-        onPopPage: (route, result) {
-          if (!route.didPop(result)) return false;
+              if (_route.pathSegments.isNotEmpty &&
+                  _route.pathSegments[0] == "test")
+                HomePage(
+                  key: const ValueKey("/test"),
+                  child: TestScreen(back: () {
+                    context
+                        .read(appPathProvider.notifier)
+                        .route(Uri.parse("/"));
+                  }),
+                ),
+            ],
+            onPopPage: (route, result) {
+              if (!route.didPop(result)) return false;
 
-          context.read(appPathProvider.notifier).route(Uri.parse("/"));
+              context.read(appPathProvider.notifier).route(Uri.parse("/"));
 
-          return true;
+              return true;
+            },
+          );
         },
       ),
     );
@@ -95,16 +97,14 @@ class HomeRouterDelegate extends RouterDelegate<Uri>
 
   @override
   Future<void> setNewRoutePath(Uri configuration) async {
-    _routeConfiguration = configuration;
+    onNewRoute(configuration);
   }
 }
 
 class TestScreen extends ConsumerWidget {
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
   final VoidCallback back;
 
-  TestScreen({Key? key, required this.back}) : super(key: key);
+  const TestScreen({Key? key, required this.back}) : super(key: key);
 
   @override
   Widget build(BuildContext context, watch) {
@@ -113,7 +113,6 @@ class TestScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("Test Page")),
       body: Navigator(
-        key: navigatorKey,
         pages: [
           TestPage(
             key: const ValueKey("/test/home"),
