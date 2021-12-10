@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:navigator2_test_flutter/main.dart';
 import 'package:navigator2_test_flutter/test_page.dart';
 
 class HomeRouteInformationParser extends RouteInformationParser<Uri> {
   @override
   Future<Uri> parseRouteInformation(RouteInformation routeInformation) async {
-    final uri = Uri.parse(routeInformation.location ?? "/");
-    return uri;
+    return Uri.parse(routeInformation.location ?? "/");
   }
 
   @override
@@ -36,62 +35,58 @@ class HomeRouterDelegate extends RouterDelegate<Uri>
 
   @override
   Widget build(BuildContext context) {
-    return ProviderListener(
-      provider: appPathProvider,
-      onChange: (context, Uri configuration) {
-        print("change: $configuration");
-        notifyListeners();
-      },
-      child: Consumer(
-        builder: (context, watch, child) {
-          final _route = watch(appPathProvider);
+    return Consumer(
+      builder: (context, ref, child) {
+        ref.listen(appPathProvider, (Uri? pre, Uri next) {
+          print("change: $next");
+          notifyListeners();
+        });
 
-          return Navigator(
-            key: navigatorKey,
-            pages: [
-              HomePage(
-                key: const ValueKey("/"),
-                child: Scaffold(
-                  appBar: AppBar(title: const Text("Home Page")),
-                  body: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text("Current Path: ${_route.path}"),
-                        OutlinedButton(
-                          child: const Text("Go to /test"),
-                          onPressed: () {
-                            context
-                                .read(appPathProvider.notifier)
-                                .route(Uri.parse("/test"));
-                          },
-                        ),
-                      ],
-                    ),
+        final _route = ref.watch(appPathProvider);
+
+        return Navigator(
+          key: navigatorKey,
+          pages: [
+            HomePage(
+              key: const ValueKey("/"),
+              child: Scaffold(
+                appBar: AppBar(title: const Text("Home Page")),
+                body: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Current Path: ${_route.path}"),
+                      OutlinedButton(
+                        child: const Text("Go to /test"),
+                        onPressed: () {
+                          ref
+                              .read(appPathProvider.notifier)
+                              .route(Uri.parse("/test"));
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
-              if (_route.pathSegments.isNotEmpty &&
-                  _route.pathSegments[0] == "test")
-                HomePage(
-                  key: const ValueKey("/test"),
-                  child: TestScreen(back: () {
-                    context
-                        .read(appPathProvider.notifier)
-                        .route(Uri.parse("/"));
-                  }),
-                ),
-            ],
-            onPopPage: (route, result) {
-              if (!route.didPop(result)) return false;
+            ),
+            if (_route.pathSegments.isNotEmpty &&
+                _route.pathSegments[0] == "test")
+              HomePage(
+                key: const ValueKey("/test"),
+                child: TestScreen(back: () {
+                  ref.read(appPathProvider.notifier).route(Uri.parse("/"));
+                }),
+              ),
+          ],
+          onPopPage: (route, result) {
+            if (!route.didPop(result)) return false;
 
-              context.read(appPathProvider.notifier).route(Uri.parse("/"));
+            ref.read(appPathProvider.notifier).route(Uri.parse("/"));
 
-              return true;
-            },
-          );
-        },
-      ),
+            return true;
+          },
+        );
+      },
     );
   }
 
@@ -107,17 +102,40 @@ class TestScreen extends ConsumerWidget {
   const TestScreen({Key? key, required this.back}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, watch) {
-    final _route = watch(appPathProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final _route = ref.watch(appPathProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Test Page")),
       body: Navigator(
         pages: [
           TestPage(
-            key: const ValueKey("/test/home"),
-            child: Scaffold(
-              body: Center(
+            key: const ValueKey("/test"),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Current Path: ${_route.path}"),
+                  OutlinedButton(
+                    child: const Text("Go to /"),
+                    onPressed: back,
+                  ),
+                  OutlinedButton(
+                    child: const Text("Go to /test/test"),
+                    onPressed: () {
+                      ref
+                          .read(appPathProvider.notifier)
+                          .route(Uri.parse("/test/test"));
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_route.path == "/test/test")
+            TestPage(
+              key: const ValueKey("/test/test"),
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -127,41 +145,14 @@ class TestScreen extends ConsumerWidget {
                       onPressed: back,
                     ),
                     OutlinedButton(
-                      child: const Text("Go to /test/test"),
+                      child: const Text("Go to /test"),
                       onPressed: () {
-                        context
+                        ref
                             .read(appPathProvider.notifier)
-                            .route(Uri.parse("/test/test"));
+                            .route(Uri.parse("/test"));
                       },
                     ),
                   ],
-                ),
-              ),
-            ),
-          ),
-          if (_route.path == "/test/test")
-            TestPage(
-              key: const ValueKey("/test/test"),
-              child: Scaffold(
-                body: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text("Current Path: ${_route.path}"),
-                      OutlinedButton(
-                        child: const Text("Go to /"),
-                        onPressed: back,
-                      ),
-                      OutlinedButton(
-                        child: const Text("Go to /test"),
-                        onPressed: () {
-                          context
-                              .read(appPathProvider.notifier)
-                              .route(Uri.parse("/test"));
-                        },
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -169,7 +160,7 @@ class TestScreen extends ConsumerWidget {
         onPopPage: (route, result) {
           if (!route.didPop(result)) return false;
 
-          context.read(appPathProvider.notifier).route(Uri.parse("/test"));
+          ref.read(appPathProvider.notifier).route(Uri.parse("/test"));
 
           return true;
         },

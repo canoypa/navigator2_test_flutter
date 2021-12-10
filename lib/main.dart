@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:navigator2_test_flutter/router.dart';
 
 class AppPathState extends StateNotifier<Uri> {
@@ -21,18 +21,18 @@ void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'Flutter Demo',
       theme: ThemeData.dark(),
       routeInformationParser: HomeRouteInformationParser(),
       routerDelegate: HomeRouterDelegate(
-        getCurrent: () => context.read(appPathProvider.notifier).current,
-        onNewRoute: context.read(appPathProvider.notifier).route,
+        getCurrent: () => ref.read(appPathProvider.notifier).current,
+        onNewRoute: ref.read(appPathProvider.notifier).route,
       ),
     );
   }
